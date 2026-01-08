@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"fortio.org/terminal/ansipixels"
+	"fortio.org/terminal/ansipixels/tcolor"
 )
 
 type config struct {
@@ -117,10 +118,21 @@ func main() {
 					c.input = "_ans_" + c.input
 				}
 				newRecord := historyRecord{
-					evaluated: c.input,
+					evaluated: strings.Replace(c.input, "_ans_-", "-", 1),
 				}
-				c.state.Exec(c.input)
+				ans := c.state.ans
+				newRecord.evaluated = strings.ReplaceAll(newRecord.evaluated, "_ans_", strconv.Itoa(int(ans)))
+				err = c.state.Exec(c.input)
+				if err != nil {
+					c.input = ""
+					c.index = 0
+					c.state.ans = 0
+					return true
+				}
 				newRecord.finalValue = c.state.ans
+				if newRecord.evaluated == "" {
+					newRecord.evaluated = strconv.Itoa(int(newRecord.finalValue))
+				}
 				c.history = append(c.history, newRecord)
 				c.input, c.index = "", 0
 			default:
@@ -141,8 +153,6 @@ func main() {
 				c.AP.WriteAtStr(c.AP.W/2, i, "⏐")
 			}
 			for i, record := range c.history {
-				// for i := len(c.history) - 1; i > -1; i-- {
-				// 	record := c.history[i]
 				line := record.evaluated + ": " + strconv.Itoa(int(record.finalValue))
 				runes := make([]rune, len(line), c.AP.W/2-1)
 				for i := range line {
@@ -152,11 +162,11 @@ func main() {
 					for j := len(line); j < c.AP.W/2-1; j++ {
 						runes = append(runes, '⎯')
 					}
-					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)+1, string(runes))
+					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)+1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
 				}
 
 				c.AP.WriteAtStr(ap.W-len(line), ap.H-((len(c.history)-i)*2), line)
-				c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)-1, string(runes))
+				c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)-1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
 			}
 		}
 		c.AP.MoveCursor(c.index, c.AP.H-2)
@@ -166,10 +176,6 @@ func main() {
 				bit := c.determineBitFromXY(x, c.AP.H-2-y)
 				c.state.ans = (c.state.ans) ^ (1 << bit)
 			}
-		}
-		if err != nil {
-			slog.Error("error getting signals", "error", err)
-			return false
 		}
 		return true
 	})

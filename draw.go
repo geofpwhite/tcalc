@@ -57,6 +57,8 @@ func displayString(num int64) string {
 
 func ascii(num int64) string {
 	switch num {
+	case 12:
+		return "ascii: \n"
 	case 7:
 		return "ascii: \n"
 	case 10:
@@ -64,6 +66,6 @@ func ascii(num int64) string {
 	case 11:
 		return "ascii: \\r\n"
 	default:
-		return "ascii: " + string(num) + "\n" //nolint:stringintconv // we want to display the ascii value, so bare cast to string is correct
+		return "ascii: " + string(rune(num)) + "\n"
 	}
 }

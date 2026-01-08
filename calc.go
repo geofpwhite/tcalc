@@ -61,6 +61,8 @@ var length2operators = []doubleRuneOperator{
 	LEFTSHIFT, RIGHTSHIFT,
 }
 
+var negative = []string{"("}
+
 func (s *state) Tokenize(input string) []string {
 	tokens := make([]string, 0, len(input))
 	cur := ""
@@ -100,6 +102,16 @@ func (s *state) Tokenize(input string) []string {
 	tokens = tokens[:len(tokens):len(tokens)]
 	if cur != "" {
 		tokens = append(tokens, cur)
+	}
+	for i, token := range tokens {
+		if token == "-" {
+			before := tokens[:i]
+			after := tokens[i+2:]
+			s := append([]string{"(", "0"}, []string{token, tokens[i+1]}...)
+			s = append(s, ")")
+			tokens = append(before, s...)
+			tokens = append(tokens, after...)
+		}
 	}
 	return tokens
 }
