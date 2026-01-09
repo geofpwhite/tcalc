@@ -60,95 +60,16 @@ func main() {
 		if diff > 0 {
 			c.history = c.history[diff:]
 		}
-		if len(ap.Data) > 2 {
-			switch string(ap.Data) {
-			case "\x1b[H": // home
-				c.index = 0
-			case "\x1b[F": // home
-				c.index = len(c.input)
-			case "\x1b[C": // right
-				c.index = min(c.index+1, len(c.input))
-			case "\x1b[D": // left
-				c.index = max(c.index-1, 0)
-			case "\x1b[A": // up
-				if len(c.history) > 1 {
-					switch c.curRecord {
-					case -1:
-						c.curRecord += len(c.history)
-					case 0:
-						c.curRecord += len(c.history) - 1
-
-					default:
-						c.curRecord -= 1
-
-					}
-
-					c.input = c.history[c.curRecord].evaluated
-
-					if c.curRecord > 0 {
-						c.input = strings.Replace(c.input, "_ans_", strconv.Itoa(int(c.history[c.curRecord-1].finalValue)), 1)
-					}
-					c.index = len(c.input)
-				}
-			case "\x1b[B": // down
-				if len(c.history) > 1 {
-					c.curRecord = (c.curRecord + 1) % len(c.history)
-					c.input = c.history[c.curRecord].evaluated
-					if c.curRecord > 0 {
-						c.input = strings.Replace(c.history[c.curRecord].evaluated, "_ans_", strconv.Itoa(int(c.history[c.curRecord-1].finalValue)), 1)
-					}
-					c.index = len(c.input)
-				}
-			case "\x1b[3~":
-				before, after := c.input[:c.index], c.input[min(len(c.input), c.index+1):]
-				c.input = before + after
-			}
+		stop := !c.handleInput()
+		if stop {
+			return false
 		}
-		if len(ap.Data) == 1 {
-			switch ap.Data[0] {
-			case '\x03':
-				return false
-			case '\x7f':
-				before, after := c.input[:max(0, c.index-1)], c.input[c.index:]
-				c.input = before + after
-				c.index = max(c.index-1, 0)
-			case '\r', '\n':
-				if (len(c.input) > 2 && slices.Contains(length2operators, doubleRuneOperator(c.input[:2]))) ||
-					(len(c.input) > 0 && slices.Contains(length1operatorsInfix, operator(c.input[0]))) {
-					c.input = "_ans_" + c.input
-				}
-				newRecord := historyRecord{
-					evaluated: strings.Replace(c.input, "_ans_-", "-", 1),
-				}
-				ans := c.state.ans
-				newRecord.evaluated = strings.ReplaceAll(newRecord.evaluated, "_ans_", strconv.Itoa(int(ans)))
-				err = c.state.Exec(c.input)
-				if err != nil {
-					c.input = ""
-					c.index = 0
-					c.state.ans = ans
-				}
-				newRecord.finalValue = c.state.ans
-				if newRecord.evaluated == "" {
-					newRecord.evaluated = strconv.Itoa(int(newRecord.finalValue))
-				}
-				c.history = append(c.history, newRecord)
-				c.input, c.index = "", 0
-			default:
-				c.curRecord = -1
-				before, after := c.input[:c.index], c.input[c.index:]
-				c.input = before + string(ap.Data) + after
-				c.index = c.index + 1
-			}
-		}
-		// fmt.Println(string(ap.Data))
 		c.AP.ClearScreen()
 		strings := displayString(c.state.ans)
 		y := ap.H - 11
 		for i, str := range strings {
 			c.AP.WriteAtStr(0, y+i, str)
 		}
-		// c.AP.WriteAtStr(0, ap.H-11, displayString(c.state.ans))
 		c.AP.WriteAtStr(0, c.AP.H, "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯")
 		c.AP.WriteAtStr(0, c.AP.H-2, c.input)
 		if c.AP.W > 76 {
@@ -167,7 +88,6 @@ func main() {
 					}
 					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)+1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
 				}
-
 				c.AP.WriteAtStr(ap.W-len(line), ap.H-((len(c.history)-i)*2), line)
 				c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)-1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
 			}
@@ -175,10 +95,9 @@ func main() {
 		c.AP.MoveCursor(c.index, c.AP.H-2)
 		if c.AP.LeftClick() && c.AP.MouseRelease() {
 			x, y := c.AP.Mx, c.AP.My
-			if slices.Contains(validClickXs, x) && y <= c.AP.H-2 && y >= c.AP.H-6 {
+			if slices.Contains(validClickXs, x) && y < c.AP.H-2 && y >= c.AP.H-6 {
 				bit := c.determineBitFromXY(x, c.AP.H-2-y)
 				c.state.ans = (c.state.ans) ^ (1 << bit)
-
 			}
 		}
 		return true
@@ -191,11 +110,95 @@ func main() {
 func (c *config) determineBitFromXY(x, y int) int {
 	index := slices.Index(validClickXs, x)
 	bit := 0
-
 	if index != -1 {
 		bit += (15 - index)
 		bit += (16 * (y - 1))
 	}
 	c.bitset = bit
 	return bit
+}
+
+func (c *config) handleInput() bool {
+	switch len(c.AP.Data) {
+	case 0:
+		return true
+	case 1:
+		switch c.AP.Data[0] {
+		case '\x03':
+			return false
+		case '\x7f':
+			before, after := c.input[:max(0, c.index-1)], c.input[c.index:]
+			c.input = before + after
+			c.index = max(c.index-1, 0)
+		case '\r', '\n':
+			if (len(c.input) > 2 && slices.Contains(length2operators, doubleRuneOperator(c.input[:2]))) ||
+				(len(c.input) > 0 && slices.Contains(length1operatorsInfix, operator(c.input[0]))) {
+				c.input = "_ans_" + c.input
+			}
+			newRecord := historyRecord{
+				evaluated: strings.Replace(c.input, "_ans_-", "-", 1),
+			}
+			ans := c.state.ans
+			newRecord.evaluated = strings.ReplaceAll(newRecord.evaluated, "_ans_", strconv.Itoa(int(ans)))
+			err := c.state.Exec(c.input)
+			if err != nil {
+				c.input = ""
+				c.index = 0
+				c.state.ans = ans
+				break
+			}
+			newRecord.finalValue = c.state.ans
+			if newRecord.evaluated == "" {
+				newRecord.evaluated = strconv.Itoa(int(newRecord.finalValue))
+			}
+			c.history = append(c.history, newRecord)
+			c.input, c.index = "", 0
+		default:
+			c.curRecord = -1
+			before, after := c.input[:c.index], c.input[c.index:]
+			c.input = before + string(c.AP.Data) + after
+			c.index++
+		}
+	default:
+		switch string(c.AP.Data) {
+		case "\x1b[H": // home
+			c.index = 0
+		case "\x1b[F": // end
+			c.index = len(c.input)
+		case "\x1b[C": // right
+			c.index = min(c.index+1, len(c.input))
+		case "\x1b[D": // left
+			c.index = max(c.index-1, 0)
+		case "\x1b[A": // up
+			if len(c.history) > 1 {
+				switch c.curRecord {
+				case -1:
+					c.curRecord += len(c.history)
+				case 0:
+					c.curRecord += len(c.history) - 1
+				default:
+					c.curRecord--
+				}
+				c.input = c.history[c.curRecord].evaluated
+				// if c.curRecord > 0 && int(c.history[c.curRecord-1].finalValue){
+				// 	c.input = strings.Replace(c.input, "_ans_", "("+strconv.Itoa(int(c.history[c.curRecord-1].finalValue))+")", 1)
+				// }
+				c.index = len(c.input)
+			}
+		case "\x1b[B": // down
+			if len(c.history) > 1 {
+				c.curRecord = (c.curRecord + 1) % len(c.history)
+				c.input = c.history[c.curRecord].evaluated
+				if c.curRecord > 0 {
+					c.input = strings.Replace(c.history[c.curRecord].evaluated, "_ans_",
+						strconv.Itoa(int(c.history[c.curRecord-1].finalValue)), 1)
+				}
+				c.index = len(c.input)
+			}
+		case "\x1b[3~":
+			before, after := c.input[:c.index], c.input[min(len(c.input), c.index+1):]
+			c.input = before + after
+		}
+	}
+	return true
 }

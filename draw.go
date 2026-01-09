@@ -19,7 +19,7 @@ func binaryDisplayString(num int64) []string {
 		value := (int(((1 << i) & num) >> i))
 		value = max(value, -value)
 		valueString := strconv.Itoa(value)
-		if rows[j][k] == nil {
+		if rows[j][k] == nil { //nolint:gosec // we are doing some math to ensure we stay in bounds
 			rows[j][k] = make([]string, 4)
 		}
 		rows[j][k][w] = valueString

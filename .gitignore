@@ -1,0 +1,5 @@
+.golangci.yml
+cpu.prof
+mem.prof
+tcalc.test.exe
+trace.out
