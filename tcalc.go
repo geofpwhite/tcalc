@@ -143,8 +143,12 @@ func main() {
 		}
 		// fmt.Println(string(ap.Data))
 		c.AP.ClearScreen()
-
-		c.AP.WriteAtStr(0, ap.H-11, displayString(c.state.ans))
+		strings := displayString(c.state.ans)
+		y := ap.H - 11
+		for i, str := range strings {
+			c.AP.WriteAtStr(0, y+i, str)
+		}
+		// c.AP.WriteAtStr(0, ap.H-11, displayString(c.state.ans))
 		c.AP.WriteAtStr(0, c.AP.H, "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯")
 		c.AP.WriteAtStr(0, c.AP.H-2, c.input)
 		if c.AP.W > 76 {
@@ -174,6 +178,7 @@ func main() {
 			if slices.Contains(validClickXs, x) && y <= c.AP.H-2 && y >= c.AP.H-6 {
 				bit := c.determineBitFromXY(x, c.AP.H-2-y)
 				c.state.ans = (c.state.ans) ^ (1 << bit)
+
 			}
 		}
 		return true

@@ -12,15 +12,17 @@ const (
 	binaryString  string = "Binary: \n"
 )
 
-func binaryDisplayString(num int64) string {
+func binaryDisplayString(num int64) []string {
 	var rows [4][4][]string
 	var j, k, w int
 	for i := 63; i > -1; i-- {
-		value := strconv.Itoa(int(((1 << i) & num) >> i))
+		value := (int(((1 << i) & num) >> i))
+		value = max(value, -value)
+		valueString := strconv.Itoa(value)
 		if rows[j][k] == nil {
 			rows[j][k] = make([]string, 4)
 		}
-		rows[j][k][w] = value
+		rows[j][k][w] = valueString
 		w = (w + 1) % 4
 		if w == 0 {
 			k = (k + 1) % 4
@@ -29,7 +31,7 @@ func binaryDisplayString(num int64) string {
 			}
 		}
 	}
-	display := binaryString
+	display := []string{binaryString}
 	for i := range 4 {
 		displayValue := strconv.Itoa((64 - (16 * i)))
 		var inner []string
@@ -38,7 +40,7 @@ func binaryDisplayString(num int64) string {
 		}
 		innerString := strings.Join(inner, "  ")
 
-		display += displayValue + ": " + innerString + "\n"
+		display = append(display, displayValue+": "+innerString+"\n")
 	}
 	return display
 }
@@ -51,8 +53,8 @@ func hexDisplayString(num int64) string {
 	return hexString + fmt.Sprintf("%x\n", num)
 }
 
-func displayString(num int64) string {
-	return ascii(num) + decimalDisplayString(num) + hexDisplayString(num) + binaryDisplayString(num)
+func displayString(num int64) []string {
+	return append([]string{ascii(num), decimalDisplayString(num), hexDisplayString(num)}, binaryDisplayString(num)...)
 }
 
 func ascii(num int64) string {
