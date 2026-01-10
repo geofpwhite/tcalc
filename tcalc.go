@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -32,6 +33,7 @@ var validClickXs = []int{
 
 func main() {
 	ap := ansipixels.NewAnsiPixels(30)
+	flag.Parse()
 	c := config{ap, newState(), "", 0, -1, []historyRecord{{"0", 0}}, -1}
 	err := c.AP.Open()
 	if err != nil {
@@ -86,10 +88,12 @@ func main() {
 					for j := len(line); j < c.AP.W/2-1; j++ {
 						runes = append(runes, '⎯')
 					}
-					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)+1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
+					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)+1, tcolor.Green.Foreground()+string(runes))
 				}
-				c.AP.WriteAtStr(ap.W-len(line), ap.H-((len(c.history)-i)*2), line)
-				c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)-1, tcolor.Green.Foreground()+string(runes)+tcolor.Reset)
+				if c.curRecord != i-1 {
+					c.AP.WriteAtStr(ap.W-len(runes), ap.H-((len(c.history)-i)*2)-1, string(runes)+tcolor.Reset)
+				}
+				c.AP.WriteAtStr(ap.W-len(line), ap.H-((len(c.history)-i)*2), tcolor.Reset+line)
 			}
 		}
 		c.AP.MoveCursor(c.index, c.AP.H-2)
