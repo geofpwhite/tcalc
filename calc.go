@@ -27,42 +27,43 @@ func newState() *state {
 	}
 }
 
+//go:generate stringer -type=Operator
 type (
-	operator           rune
-	doubleRuneOperator string
+	Operator           rune
+	DoubleRuneOperator string
 )
 
 const (
-	SUM  operator = '+'
-	SUB  operator = '-'
-	PROD operator = '*'
-	DIV  operator = '/'
-	XOR  operator = '^'
-	OR   operator = '|'
-	NOT  operator = '~'
-	AND  operator = '&'
-	MOD  operator = '%'
+	SUM  Operator = '+'
+	SUB  Operator = '-'
+	PROD Operator = '*'
+	DIV  Operator = '/'
+	XOR  Operator = '^'
+	OR   Operator = '|'
+	NOT  Operator = '~'
+	AND  Operator = '&'
+	MOD  Operator = '%'
 
-	ASSIGN operator = '='
+	ASSIGN Operator = '='
 
-	LPAREN operator = '('
-	RPAREN operator = ')'
+	LPAREN Operator = '('
+	RPAREN Operator = ')'
 	// two rune operators
 
-	LEFTSHIFT  doubleRuneOperator = "<<"
-	RIGHTSHIFT doubleRuneOperator = ">>"
-	EXP        doubleRuneOperator = "**"
+	LEFTSHIFT  DoubleRuneOperator = "<<"
+	RIGHTSHIFT DoubleRuneOperator = ">>"
+	EXP        DoubleRuneOperator = "**"
 )
 
-var length1operatorsInfix = []operator{
+var length1operatorsInfix = []Operator{
 	SUM, SUB, PROD, DIV, XOR, AND, MOD, ASSIGN, OR,
 }
 
-var length1operatorsPrefix = []operator{
+var length1operatorsPrefix = []Operator{
 	NOT,
 }
 
-var length2operators = []doubleRuneOperator{
+var length2operators = []DoubleRuneOperator{
 	LEFTSHIFT, RIGHTSHIFT,
 }
 
@@ -80,8 +81,8 @@ func (s *state) Tokenize(input string) ([]string, error) {
 		}
 		if char == '(' ||
 			char == ')' ||
-			slices.Contains(length1operatorsInfix, operator(char)) ||
-			slices.Contains(length1operatorsPrefix, operator(char)) {
+			slices.Contains(length1operatorsInfix, Operator(char)) ||
+			slices.Contains(length1operatorsPrefix, Operator(char)) {
 			if len(cur) > 0 {
 				tokens = append(tokens, cur)
 				cur = ""
@@ -107,7 +108,7 @@ func (s *state) Tokenize(input string) ([]string, error) {
 			cur = string(char)
 		default:
 			cur += string(char)
-			if slices.Contains(length2operators, doubleRuneOperator(cur)) {
+			if slices.Contains(length2operators, DoubleRuneOperator(cur)) {
 				tokens = append(tokens, cur)
 				cur = ""
 			}
@@ -160,7 +161,7 @@ func (s *state) Eval(curNode calcNode) (int64, error) { //nolint:funlen,gocyclo 
 		}
 		return -1 * num, nil
 	}
-	if slices.Contains(length1operatorsInfix, operator((*curNode.value)[0])) {
+	if slices.Contains(length1operatorsInfix, Operator((*curNode.value)[0])) {
 		l, err := s.Eval(*curNode.left)
 		if err != nil {
 			return 0, err
@@ -194,7 +195,7 @@ func (s *state) Eval(curNode calcNode) (int64, error) { //nolint:funlen,gocyclo 
 			return -1, errors.New("invalid operator")
 		}
 	}
-	if slices.Contains(length1operatorsPrefix, operator((*curNode.value)[0])) {
+	if slices.Contains(length1operatorsPrefix, Operator((*curNode.value)[0])) {
 		num, err := s.Eval(*curNode.right)
 		if err != nil {
 			return -1, err
@@ -206,7 +207,7 @@ func (s *state) Eval(curNode calcNode) (int64, error) { //nolint:funlen,gocyclo 
 			return -1, errors.New("bad prefix operator")
 		}
 	}
-	if slices.Contains(length2operators, doubleRuneOperator(*curNode.value)) {
+	if slices.Contains(length2operators, DoubleRuneOperator(*curNode.value)) {
 		l, err := s.Eval(*curNode.left)
 		if err != nil {
 			return 0, err
@@ -259,7 +260,7 @@ func (s *state) parse(tokens []string, index int, cur *calcNode) *calcNode {
 	// 		token == "-") {
 	// 	s.parse(tokens, index+1, &newNode)
 	// }
-	if slices.Contains(length1operatorsInfix, operator(token[0])) && token[0] != '=' {
+	if slices.Contains(length1operatorsInfix, Operator(token[0])) && token[0] != '=' {
 		newNode.left = cur
 		// new.right = s.parse(tokens, index+1, nil)
 		return s.parse(tokens, index+1, &newNode)

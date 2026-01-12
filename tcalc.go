@@ -195,12 +195,17 @@ func (c *config) handleEnter() {
 			c.input = c.history[len(c.history)-1].evaluated
 		}
 	}
+	trimmed := strings.Trim(c.input, " ")
+	lengthTrimmed := len(trimmed)
+	if lengthTrimmed >= 2 && (trimmed[lengthTrimmed-2:] == "<<" || trimmed[lengthTrimmed-2:] == ">>") {
+		c.input += "1"
+	}
 	ansValue := "_ans_"
 	if c.clicked {
 		ansValue = strconv.Itoa(int(c.state.ans))
 	}
-	if (len(c.input) >= 2 && slices.Contains(length2operators, doubleRuneOperator(c.input[:2]))) ||
-		(len(c.input) > 0 && slices.Contains(length1operatorsInfix, operator(c.input[0]))) {
+	if (len(c.input) >= 2 && slices.Contains(length2operators, DoubleRuneOperator(c.input[:2]))) ||
+		(len(c.input) > 0 && slices.Contains(length1operatorsInfix, Operator(c.input[0]))) {
 		c.input = ansValue + c.input
 	}
 	newRecord := historyRecord{

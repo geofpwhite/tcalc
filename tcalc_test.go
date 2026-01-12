@@ -48,6 +48,7 @@ func TestExec(t *testing.T) {
 		{"1 + 3 + 2", 6, false},
 		{"1 * (3 + 2)", 5, false},
 		{"(2 * (3 + 2) - 1)+ 1 / 1", 10, false},
+		{"(2 * (3 + 2) - 1)+ 1 / 1*3", 30, false},
 		{"1 << 5", 32, false},
 		{"0+-1", 0, true},
 		{"1&2", 0, false},
@@ -87,7 +88,10 @@ func TestConfigHandleInput(t *testing.T) {
 		{"test down", ap, []byte{0x1b, 0x5b, 0x42}, true},
 		{"test right", ap, []byte{0x1b, 0x5b, 0x43}, true},
 		{"test left", ap, []byte{0x1b, 0x5b, 0x44}, true},
-		{"test enter", ap, []byte{0x0d}, true},
+		{"test enter", ap, []byte("\n"), true},
+		{"test home", ap, []byte{0x1b, 0x5b, 0x48}, true},
+		{"test end", ap, []byte{0x1b, 0x5b, 0x46}, true},
+		{"test backspace", ap, []byte{0x7f}, true},
 		{"test other", ap, []byte{'a'}, true},
 	}
 	for _, tt := range tests {
@@ -133,4 +137,34 @@ func TestAssign(t *testing.T) {
 	if s.variables["x"] != 5 {
 		t.Fail()
 	}
+}
+
+func TestDrawHistory(t *testing.T) {
+	s := newState()
+	err1 := s.Exec("1+1")
+	err2 := s.Exec("2+2")
+	err3 := s.Exec("3+3")
+	if err1 != nil || err2 != nil || err3 != nil {
+		t.Fail()
+	}
+	c := configure(ansipixels.NewAnsiPixels(30))
+	c.AP.H = 100
+	c.AP.W = 100
+	c.state = s
+	c.history = append(
+		c.history,
+		historyRecord{
+			evaluated:  "1+1",
+			finalValue: 2,
+		},
+		historyRecord{
+			evaluated:  "2+2",
+			finalValue: 4,
+		},
+		historyRecord{
+			evaluated:  "3+3",
+			finalValue: 6,
+		})
+	c.curRecord = 2
+	c.DrawHistory()
 }
